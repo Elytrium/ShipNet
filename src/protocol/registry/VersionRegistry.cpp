@@ -12,20 +12,20 @@ namespace Ship {
     }
   }
 
-  uint32_t VersionRegistry::GetOrdinalByID(uint32_t id) const {
+  Errorable<uint32_t> VersionRegistry::GetOrdinalByID(uint32_t id) const {
     if (id >= idToOrdinalMap.size()) {
-      return UINT32_MAX;
+      return InvalidPacketById(id);
     }
 
-    return idToOrdinalMap[id];
+    return SuccessErrorable<uint32_t>(idToOrdinalMap[id]);
   }
 
-  uint32_t VersionRegistry::GetIDByOrdinal(uint32_t ordinal) const {
+  Errorable<uint32_t> VersionRegistry::GetIDByOrdinal(uint32_t ordinal) const {
     if (ordinal >= ordinalToIDMap.size()) {
-      throw InvalidArgumentException("Invalid (unregistered) packet: ordinal ", ordinal);
+      return InvalidPacketByOrdinal(ordinal);
     }
 
-    return ordinalToIDMap[ordinal];
+    return SuccessErrorable<uint32_t>(ordinalToIDMap[ordinal]);
   }
 
   void VersionRegistry::Register(uint32_t ordinal) {

@@ -14,6 +14,7 @@ namespace Ship {
     static OrdinalRegistry PacketRegistry;
     static OrdinalRegistry ByteBytePipeRegistry;
     static OrdinalRegistry PacketHandlerRegistry;
+    static OrdinalRegistry ErrorableTypeRegistry;
 
     uint32_t RegisterOrdinal();
 

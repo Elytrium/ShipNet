@@ -14,6 +14,32 @@ namespace Ship {
   }
 
   template<typename T>
+  class NoConstructorExistErrorable : public Errorable<T> {
+   public:
+    static inline const uint32_t TYPE_ORDINAL = OrdinalRegistry::ErrorableTypeRegistry.RegisterOrdinal();
+
+    explicit NoConstructorExistErrorable(uint32_t ordinal) : Errorable<T>(TYPE_ORDINAL, {}, ordinal) {
+    }
+
+    void Print(std::ostream o) {
+      o << "No constructor exist, packet ordinal: " << this->GetErrorCode();
+    }
+  };
+
+  template<typename T>
+  class NoConstructorOrdinalExistErrorable : public Errorable<T> {
+   public:
+    static inline const uint32_t TYPE_ORDINAL = OrdinalRegistry::ErrorableTypeRegistry.RegisterOrdinal();
+
+    explicit NoConstructorOrdinalExistErrorable(uint32_t id) : Errorable<T>(TYPE_ORDINAL, {}, id) {
+    }
+
+    void Print(std::ostream o) {
+      o << "No constructor exist, packet id: " << this->GetErrorCode();
+    }
+  };
+
+  template<typename T>
   class ConstructorRegistry : public VersionedRegistry {
    private:
     std::vector<std::function<T*(const ProtocolVersion* version, ByteBuffer* buffer)>> ordinalToObjectMap;
@@ -25,17 +51,17 @@ namespace Ship {
       OrdinalVector::ResizeVectorAndSet(ordinalToObjectMap, ordinal, constructor);
     }
 
-    T* GetObjectByID(const ProtocolVersion* version, uint32_t id, ByteBuffer* buffer) const {
-      uint32_t ordinal = GetOrdinalByID(version, id);
-      if (ordinal >= ordinalToObjectMap.size()) {
-        return nullptr;
+    Errorable<T*> GetObjectByID(const ProtocolVersion* version, uint32_t id, ByteBuffer* buffer) const {
+      ProceedErrorable(ordinal, uint32_t, GetOrdinalByID(version, id), NoConstructorOrdinalExistErrorable<T*>(id))
+        if (ordinal >= ordinalToObjectMap.size()) {
+        return NoConstructorExistErrorable<T*>(ordinal);
       }
 
       std::function<T*(const ProtocolVersion* version, ByteBuffer* buffer)> constructor = ordinalToObjectMap[ordinal];
       if (constructor) {
-        return constructor(version, buffer);
+        return SuccessErrorable<T*>(constructor(version, buffer));
       } else {
-        return nullptr;
+        return NoConstructorExistErrorable<T*>(ordinal);
       }
     }
 

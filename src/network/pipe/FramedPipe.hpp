@@ -3,10 +3,10 @@
 #include "Pipe.hpp"
 
 namespace Ship {
-  class IncompleteFrameException : public Exception {
-   public:
-    IncompleteFrameException() : Exception("ByteBuffer doesn't contain enough data to read frame correctly") {}
-  };
+  CreateInvalidArgumentErrorable(IncompleteByteFrameErrorable, size_t, "ByteBuffer doesn't contain enough data to read frame correctly");
+  CreateInvalidArgumentErrorable(InvalidByteFrameErrorable, size_t, "An exception occurred while decoding frame");
+  CreateInvalidArgumentErrorable(IncompleteFrameErrorable, PacketHolder, "ByteBuffer doesn't contain enough data to read frame correctly");
+  CreateInvalidArgumentErrorable(InvalidFrameErrorable, PacketHolder, "An exception occurred while decoding frame");
 
   class FramedByteBytePipe : public ByteBytePipe {
    private:
@@ -19,11 +19,11 @@ namespace Ship {
       : ByteBytePipe(reader_buffer_length, writer_buffer_length), maxReadSize(max_read_size) {
     }
 
-    void Write(ByteBuffer* in) override;
-    void Read(ByteBuffer* in) override;
+    Errorable<size_t> Write(ByteBuffer* in) override;
+    Errorable<size_t> Read(ByteBuffer* in) override;
 
-    virtual void EncodeFrame(ByteBuffer* in, uint32_t frame_size) = 0;
-    virtual void DecodeFrame(ByteBuffer* in, uint32_t frame_size) = 0;
+    virtual Errorable<size_t> EncodeFrame(ByteBuffer* in, uint32_t frame_size) = 0;
+    virtual Errorable<size_t> DecodeFrame(ByteBuffer* in, uint32_t frame_size) = 0;
   };
 
   class FramedBytePacketPipe : public BytePacketPipe {
@@ -35,8 +35,8 @@ namespace Ship {
     explicit FramedBytePacketPipe(uint32_t max_read_size) : BytePacketPipe(), maxReadSize(max_read_size) {
     }
 
-    PacketHolder Read(ByteBuffer* in) override;
+    Errorable<PacketHolder> Read(ByteBuffer* in) override;
 
-    virtual PacketHolder ReadPacket(ByteBuffer* in, uint32_t frame_size) = 0;
+    virtual Errorable<PacketHolder> ReadPacket(ByteBuffer* in, uint32_t frame_size) = 0;
   };
 }

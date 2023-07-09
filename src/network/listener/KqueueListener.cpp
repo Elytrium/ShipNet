@@ -21,15 +21,15 @@ namespace Ship {
     delete[] errorBuffer;
   }
 
-  void KqueueListener::StartListening(SocketAddress address) {
+  Errorable<int> KqueueListener::Bind(SocketAddress address) {
     socketFileDescriptor = socket(AF_INET, SOCK_STREAM, 0);
     if (socketFileDescriptor == -1) {
-      throw Exception("Error while creating socket. No permissions?");
+      return ErrnoErrorable<int>(socketFileDescriptor);
     }
 
     int fionbioValue = true;
     if (ioctl(socketFileDescriptor, FIONBIO, &fionbioValue) == -1) {
-      throw ErrnoException(errorBuffer, 64);
+      return ErrnoErrorable<int>(socketFileDescriptor);
     }
 
     sockaddr_in bindAddress {};
@@ -38,26 +38,42 @@ namespace Ship {
     bindAddress.sin_addr.s_addr = inet_addr(address.GetHostname().c_str());
 
     if (bind(socketFileDescriptor, (sockaddr*) &bindAddress, sizeof(sockaddr_in)) == -1) {
-      throw ErrnoException(errorBuffer, 64);
+      return ErrnoErrorable<int>(socketFileDescriptor);
     }
 
     if (listen(socketFileDescriptor, SOMAXCONN) == -1) {
-      throw ErrnoException(errorBuffer, 64);
+      return ErrnoErrorable<int>(socketFileDescriptor);
     }
 
     kqueueFileDescriptor = kqueue();
 
     if (kqueueFileDescriptor == -1) {
-      throw ErrnoException(errorBuffer, 64);
+      return ErrnoErrorable<int>(kqueueFileDescriptor);
     }
 
     struct kevent ctlEvent {};
     EV_SET(&ctlEvent, socketFileDescriptor, EVFILT_READ | EVFILT_WRITE, EV_ADD, 0, 0, NULL);
 
     if (::kevent(kqueueFileDescriptor, &ctlEvent, 1, nullptr, 0, nullptr) == -1) {
-      throw ErrnoException(errorBuffer, 64);
+      return ErrnoErrorable<int>(kqueueFileDescriptor);
     }
 
+    return SuccessErrorable<int>(epollFileDescriptor);
+  }
+
+  Errorable<int> Accept(int socketFileDescriptor, sockaddr* connectionAddress, socklen_t* length, int flags) {
+    int receivedFileDescriptor = accept(socketFileDescriptor, &connectionAddress, &length);
+    if (receivedFileDescriptor == -1) {
+      return ErrnoErrorable<int>(receivedFileDescriptor);
+    }
+
+    int receivedFlags = fcntl(receivedFileDescriptor, F_GETFL, 0);
+    fcntl(receivedFileDescriptor, F_SETFL, receivedFlags | flags);
+
+    return SuccessErrorable<int>(receivedFileDescriptor);
+  }
+
+  [[noreturn]] void KqueueListener::StartListening() {
     struct kevent events[maxEvents];
     struct kevent event; // NOLINT(cppcoreguidelines-pro-type-member-init)
     while (true) {
@@ -65,33 +81,21 @@ namespace Ship {
 
       for (int i = 0; i < amount; ++i) {
         event = events[i];
-        try {
-          while (true) {
-            if (!(event.flags & EVFILT_READ)) {
-              throw ErrnoException(errorBuffer, 64);
-            } else {
-              sockaddr connectionAddress {};
-              socklen_t length = sizeof(sockaddr);
+        while (true) {
+          sockaddr connectionAddress {};
+          socklen_t length = sizeof(sockaddr);
 
-              int receivedFileDescriptor = accept(socketFileDescriptor, &connectionAddress, &length);
-              if (receivedFileDescriptor == -1) {
-                if (errno != EAGAIN) {
-                  throw ErrnoException(errorBuffer, 64);
-                }
-
-                break;
-              }
-
-              int flags = fcntl(receivedFileDescriptor, F_GETFL, 0);
-              fcntl(receivedFileDescriptor, F_SETFL, flags | O_NONBLOCK | O_CLOEXEC);
-
-              eventLoop->Accept(receivedFileDescriptor);
-            }
+          Errorable<int> receivedFileDescriptor = Accept(socketFileDescriptor, &connectionAddress, &length, O_NONBLOCK | O_CLOEXEC);
+          if (receivedFileDescriptor.GetTypeOrdinal() == ErrnoErrorable<int>::TYPE_ORDINAL && errno == EAGAIN) {
+            break;
+          } else if (!receivedFileDescriptor.IsSuccess()) {
+            // Log Exception
+            close((int) event.ident);
+            close(kqueueFileDescriptor);
+            break;
+          } else {
+            eventLoop->Accept(receivedFileDescriptor.GetValue());
           }
-        } catch (std::exception& e) {
-          close((int) event.ident);
-          close(kqueueFileDescriptor);
-          throw;
         }
       }
     }

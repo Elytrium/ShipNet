@@ -1,9 +1,9 @@
 #pragma once
 
+#include "../../../utils/exception/Errorable.hpp"
 #include <string>
 
 namespace Ship {
-
   class UUID {
    private:
     uint64_t mostSignificant;
@@ -12,9 +12,7 @@ namespace Ship {
    public:
     UUID() = default;
 
-    explicit UUID(const std::string& uuid);
-
-    explicit UUID(const char* chars);
+    static Errorable<UUID> Instantiate(const std::string& uuid);
 
     UUID(uint64_t mostSignificant, uint64_t leastSignificant);
 
@@ -27,4 +25,5 @@ namespace Ship {
     [[nodiscard]] std::string ToString() const;
   };
 
+  CreateInvalidArgumentErrorable(InvalidUUIDSizeErrorable, UUID, "Invalid UUID size");
 }

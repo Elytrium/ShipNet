@@ -6,6 +6,9 @@
 #include <vector>
 
 namespace Ship {
+  CreateInvalidArgumentErrorable(InvalidPacketByOrdinal, uint32_t, "Invalid (unregistered) packet by ordinal");
+  CreateInvalidArgumentErrorable(InvalidPacketById, uint32_t, "Invalid (unregistered) packet by id");
+
   class VersionRegistry {
    private:
     std::vector<uint32_t> ordinalToIDMap = std::vector<uint32_t>();
@@ -28,7 +31,7 @@ namespace Ship {
 
     void Register(uint32_t ordinal);
     void Register(uint32_t ordinal, uint32_t id);
-    [[nodiscard]] uint32_t GetOrdinalByID(uint32_t id) const;
-    [[nodiscard]] uint32_t GetIDByOrdinal(uint32_t ordinal) const;
+    [[nodiscard]] Errorable<uint32_t> GetOrdinalByID(uint32_t id) const;
+    [[nodiscard]] Errorable<uint32_t> GetIDByOrdinal(uint32_t ordinal) const;
   };
 }

@@ -3,28 +3,28 @@
 #include <utility>
 
 namespace Ship {
-  auto PacketHandler::callbacks = std::vector<std::vector<std::function<bool(PacketHandler*, void*, const PacketHolder&)>>>();
+  auto PacketHandler::callbacks = std::vector<std::vector<std::function<Errorable<bool>(PacketHandler*, void*, const PacketHolder&)>>>();
 
-  bool PacketHandler::Handle(PacketHandler* handler, void* connection, const PacketHolder& packet) {
+  Errorable<bool> PacketHandler::Handle(PacketHandler* handler, void* connection, const PacketHolder& packet) {
     if (GetOrdinal() >= callbacks.size()) {
-      return false;
+      return SuccessErrorable<bool>(false);
     }
 
     const auto& localCallbacks = callbacks[GetOrdinal()];
     uint32_t ordinal = packet.GetOrdinal();
     if (ordinal >= localCallbacks.size()) {
-      return false;
+      return SuccessErrorable<bool>(false);
     }
 
-    std::function<bool(PacketHandler*, void*, const PacketHolder&)> callback = localCallbacks[ordinal];
+    std::function<Errorable<bool>(PacketHandler*, void*, const PacketHolder&)> callback = localCallbacks[ordinal];
     if (callback) {
       return callback(handler, connection, packet);
     } else {
-      return false;
+      return SuccessErrorable<bool>(false);
     }
   }
 
-  bool PacketHandler::HasCallback(uint32_t ordinal) {
+  bool PacketHandler::HasCallback(uint32_t ordinal) const {
     if (callbacks.size() >= GetOrdinal()) {
       return false;
     }
@@ -33,7 +33,8 @@ namespace Ship {
     return ordinal < localCallbacks.size() && localCallbacks[ordinal];
   }
 
-  void PacketHandler::SetPointerCallback(uint32_t handler_ordinal, uint32_t packet_ordinal, std::function<bool(PacketHandler*, void*, const PacketHolder&)> callback) {
+  void PacketHandler::SetPointerCallback(
+    uint32_t handler_ordinal, uint32_t packet_ordinal, std::function<Errorable<bool>(PacketHandler*, void*, const PacketHolder&)> callback) {
     if (callbacks.size() >= handler_ordinal) {
       callbacks.resize(handler_ordinal + 8);
     }

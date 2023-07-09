@@ -1,7 +1,8 @@
 #pragma once
 
-#include "../Protocol.hpp"
+#include "../../utils/exception/Errorable.hpp"
 #include "../../utils/ordinal/OrdinalRegistry.hpp"
+#include "../Protocol.hpp"
 
 namespace Ship {
 
@@ -13,23 +14,25 @@ namespace Ship {
     uint32_t expectedSize;
 
    public:
+    PacketHolder() = default;
+
     PacketHolder(uint32_t ordinal, const ProtocolVersion* version, ByteBuffer* currentBuffer, uint32_t expectedSize)
       : ordinal(ordinal), version(version), currentBuffer(currentBuffer), expectedSize(expectedSize) {
     }
 
-    uint32_t GetOrdinal() const {
+    [[nodiscard]] uint32_t GetOrdinal() const {
       return ordinal;
     }
 
-    const ProtocolVersion* GetVersion() const {
+    [[nodiscard]] const ProtocolVersion* GetVersion() const {
       return version;
     }
 
-    ByteBuffer* GetCurrentBuffer() const {
+    [[nodiscard]] ByteBuffer* GetCurrentBuffer() const {
       return currentBuffer;
     }
 
-    uint32_t GetExpectedSize() const {
+    [[nodiscard]] uint32_t GetExpectedSize() const {
       return expectedSize;
     }
   };
@@ -38,10 +41,23 @@ namespace Ship {
    public:
     ~Packet() override = default;
 
-    virtual uint32_t GetOrdinal() const = 0;
+    [[nodiscard]] virtual uint32_t GetOrdinal() const = 0;
     virtual bool SupportsOn(const ProtocolVersion* version) {
       // TODO: possibly we should do it in registry
       return true;
+    }
+  };
+
+  template<typename T>
+  class InvalidPacketErrorable : public Errorable<T> {
+   public:
+    static inline const uint32_t TYPE_ORDINAL = OrdinalRegistry::ErrorableTypeRegistry.RegisterOrdinal();
+
+    explicit InvalidPacketErrorable(uint32_t packet_ordinal) : Errorable<T>(TYPE_ORDINAL, {}, packet_ordinal) {
+    }
+
+    void Print(std::ostream o) {
+      o << "Invalid packet received, packet ordinal: " << this->GetErrorCode();
     }
   };
 }

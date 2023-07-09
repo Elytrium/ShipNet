@@ -2,7 +2,6 @@
 
 #include "../protocol/handler/PacketHandler.hpp"
 #include "../protocol/packet/Packet.hpp"
-#include "../utils/exception/InvalidArgumentException.hpp"
 #include "../utils/thread/EventLoop.hpp"
 #include "pipe/Pipe.hpp"
 #include "readwritecloser/ReadWriteCloser.hpp"
@@ -50,7 +49,6 @@ namespace Ship {
     void WriteAndFlush(const Packet& packet);
 
     void WriteDirect(ByteBuffer* buffer);
-    void WriteDirect(ByteBuffer* buffer, size_t length);
 
     ReadWriteCloser* GetReadWriteCloser();
     EventLoop* GetEventLoop();

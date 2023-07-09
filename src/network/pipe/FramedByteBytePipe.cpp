@@ -1,43 +1,58 @@
-#include "../../utils/exception/InvalidArgumentException.hpp"
 #include "FramedPipe.hpp"
 
 namespace Ship {
-  void FramedByteBytePipe::Write(ByteBuffer* in) {
+  Errorable<size_t> FramedByteBytePipe::Write(ByteBuffer* in) {
     size_t readableBytes = in->GetReadableBytes();
     if (nextWriteFrameLength == 0) {
       if (readableBytes == 0) {
-        return;
+        return IncompleteByteFrameErrorable(readableBytes);
       }
 
-      try {
-        nextWriteFrameLength = in->ReadVarInt();
-      } catch (const IncompleteVarIntException& exception) {
-        return;
+      Errorable<uint32_t> nextWriteFrameLengthErrorable = in->ReadVarInt();
+      uint32_t frameLength = nextWriteFrameLengthErrorable.GetValue();
+      if (nextWriteFrameLengthErrorable.IsSuccess()) {
+        nextWriteFrameLength = frameLength;
+      } else if (nextWriteFrameLengthErrorable.GetTypeOrdinal() == IncompleteVarIntErrorable::TYPE_ORDINAL) {
+        return IncompleteByteFrameErrorable(frameLength);
+      } else {
+        return InvalidByteFrameErrorable(frameLength);
       }
     }
 
-    if (readableBytes >= nextWriteFrameLength) {
-      EncodeFrame(in, nextWriteFrameLength);
+    size_t frameLength = nextWriteFrameLength;
+    if (readableBytes >= frameLength) {
+      Errorable<size_t> frameErrorable = EncodeFrame(in, frameLength);
       nextWriteFrameLength = 0;
+      return frameErrorable;
     }
+
+    return IncompleteByteFrameErrorable(frameLength);
   }
 
-  void FramedByteBytePipe::Read(ByteBuffer* in) {
+  Errorable<size_t> FramedByteBytePipe::Read(ByteBuffer* in) {
     if (nextReadFrameLength == 0) {
-      try {
-        nextReadFrameLength = in->ReadVarInt();
-      } catch (const IncompleteVarIntException& exception) {
-        return;
-      }
+      Errorable<uint32_t> nextReadFrameLengthErrorable = in->ReadVarInt();
+      uint32_t frameLength = nextReadFrameLengthErrorable.GetValue();
+      if (nextReadFrameLengthErrorable.IsSuccess()) {
+        if (frameLength > maxReadSize) {
+          return InvalidByteFrameErrorable(frameLength);
+        }
 
-      if (nextReadFrameLength > maxReadSize) {
-        throw InvalidArgumentException("Invalid frame size: ", nextReadFrameLength);
+        nextReadFrameLength = frameLength;
+      } else if (nextReadFrameLengthErrorable.GetTypeOrdinal() == IncompleteVarIntErrorable::TYPE_ORDINAL) {
+        return IncompleteByteFrameErrorable(frameLength);
+      } else {
+        return InvalidByteFrameErrorable(frameLength);
       }
     }
 
-    if (in->GetReadableBytes() >= nextReadFrameLength) {
-      DecodeFrame(in, nextReadFrameLength);
+    size_t frameLength = nextReadFrameLength;
+    if (in->GetReadableBytes() >= frameLength) {
+      Errorable<size_t> frameErrorable = DecodeFrame(in, frameLength);
       nextReadFrameLength = 0;
+      return frameErrorable;
     }
+
+    return IncompleteByteFrameErrorable(frameLength);
   }
 }

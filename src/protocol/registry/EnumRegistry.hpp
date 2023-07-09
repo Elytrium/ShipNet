@@ -5,15 +5,19 @@
 namespace Ship {
 
   template<typename T>
+  CreateInvalidArgumentErrorable(InvalidEnumByIdErrorable, T, "Invalid (unregistered) enum by id");
+
+  template<typename T>
   class EnumRegistry : public VersionedRegistry {
    public:
     explicit EnumRegistry(const ProtocolVersions& versions, const std::set<ProtocolVersion>& versionMap) : VersionedRegistry(versions, versionMap) {}
 
-    T GetValue(const ProtocolVersion* version, uint32_t id) const {
-      return (T) GetOrdinalByID(version, id);
+    Errorable<T> GetValue(const ProtocolVersion* version, uint32_t id) const {
+      ProceedErrorable(ordinal, uint32_t, GetOrdinalByID(version, id), InvalidEnumByIdErrorable<T>(id))
+      return SuccessErrorable<T>((T) ordinal);
     }
 
-    uint32_t GetID(const ProtocolVersion* version, const T& value) const {
+    Errorable<uint32_t> GetID(const ProtocolVersion* version, const T& value) const {
       return GetIDByOrdinal(version, (uint32_t) value);
     }
   };

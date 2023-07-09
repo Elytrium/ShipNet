@@ -24,8 +24,8 @@ namespace Ship {
     }
 
     uint32_t VersionToOrdinal(const ProtocolVersion* version) const;
-    uint32_t GetOrdinalByID(const ProtocolVersion* version, uint32_t id) const;
-    uint32_t GetIDByOrdinal(const ProtocolVersion* version, uint32_t ordinal) const;
+    Errorable<uint32_t> GetOrdinalByID(const ProtocolVersion* version, uint32_t id) const;
+    Errorable<uint32_t> GetIDByOrdinal(const ProtocolVersion* version, uint32_t ordinal) const;
     void RegisterVersion(const ProtocolVersion* version, VersionRegistry* registry);
     void FillVersionRegistry(VersionRegistry* registry);
   };

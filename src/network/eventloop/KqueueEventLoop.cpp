@@ -1,8 +1,8 @@
 #if defined(__APPLE__) || defined(__FreeBSD__)
-#include "../../utils/exception/ErrnoException.hpp"
-#include "NetworkEventLoop.hpp"
-#include <sys/fcntl.h>
-#include <unistd.h>
+  #include "../../utils/exceptions/ErrnoException.hpp"
+  #include "NetworkEventLoop.hpp"
+  #include <sys/fcntl.h>
+  #include <unistd.h>
 
 namespace Ship {
   KqueueEventLoop::KqueueEventLoop(std::function<Connection*(EventLoop*, ReadWriteCloser* writer)> initializer, int max_events, const timespec* timeout, int buffer_size)
@@ -51,7 +51,7 @@ namespace Ship {
 
         try {
           if (event.flags & EV_EOF) {
-            throw GracefulDisconnectException();
+            throw GracefulDisconnectErrorable();
           } else {
             while (true) {
               ssize_t count = connection->GetReadWriteCloser()->Read(buffer, bufferSize);
@@ -63,13 +63,13 @@ namespace Ship {
 
                 break;
               } else if (count == 0) {
-                throw GracefulDisconnectException();
+                throw GracefulDisconnectErrorable();
               } else {
                 connection->HandleNewBytes(buffer, (size_t) count);
               }
             }
           }
-        } catch (const GracefulDisconnectException& exception) {
+        } catch (const GracefulDisconnectErrorable& exception) {
           delete connection;
         }
 
