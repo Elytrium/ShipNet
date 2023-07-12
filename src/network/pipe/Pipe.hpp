@@ -46,6 +46,6 @@ namespace Ship {
     virtual ~BytePacketPipe() = default;
 
     virtual Errorable<PacketHolder> Read(ByteBuffer* in) = 0;
-    virtual ByteBuffer* Write(const Packet& in) = 0;
+    virtual Errorable<bool> Write(ByteBuffer* out, const Packet& in) = 0;
   };
 }

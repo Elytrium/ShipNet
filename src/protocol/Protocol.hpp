@@ -312,11 +312,13 @@ namespace Ship {
    public:
     virtual ~Serializable() = default;
 
-    virtual void Write(const ProtocolVersion* version, ByteBuffer* buffer) const = 0;
+    virtual Errorable<bool> Write(const ProtocolVersion* version, ByteBuffer* buffer) const = 0;
     virtual uint32_t Size(const ProtocolVersion* version) const {
       ByteCounter counter;
       Write(version, &counter);
       return counter.GetWriterIndex();
     }
   };
+
+  CreateInvalidArgumentErrorable(InvalidSerializableWriteErrorable, bool, "Tried to write invalid Serializable");
 }

@@ -2,6 +2,8 @@
 #include "pipe/FramedPipe.hpp"
 
 namespace Ship {
+  thread_local ByteBuffer* writeBuffer = new ByteBufferImpl(MAX_PACKET_SIZE);
+
   Connection::Connection(BytePacketPipe* byte_packet_pipe, PacketHandler* main_packet_handler, size_t reader_buffer_length, size_t writer_buffer_length,
     ReadWriteCloser* read_write_closer, EventLoop* event_loop)
     : bytePacketPipe(byte_packet_pipe), mainPacketHandler(main_packet_handler), readerBuffer(new ByteBufferImpl(reader_buffer_length)),
@@ -141,17 +143,37 @@ namespace Ship {
   }
 
   void Connection::Write(const Packet& packet) {
-    ByteBuffer* initBuffer = bytePacketPipe->Write(packet);
-    ByteBuffer* buffer = initBuffer;
+    writeBuffer->ResetReaderIndex();
+    writeBuffer->ResetWriterIndex();
+    Errorable<bool> shouldWriteErrorable = bytePacketPipe->Write(writeBuffer, packet);
 
-    for (auto byteBytePipeIterator = pipeline.rbegin(); byteBytePipeIterator != pipeline.rend(); ++byteBytePipeIterator) {
-      ByteBytePipe* pipe = *byteBytePipeIterator;
-      pipe->Write(buffer);
-      buffer = pipe->GetWriterBuffer();
+    if (!shouldWriteErrorable.IsSuccess()) {
+      // TODO: Log error.
+      readWriteCloser->Close();
+      return;
     }
 
-    WriteDirect(buffer);
-    delete initBuffer;
+    if (shouldWriteErrorable.GetValue()) {
+      ByteBuffer* buffer = writeBuffer;
+
+      for (auto byteBytePipeIterator = pipeline.rbegin(); byteBytePipeIterator != pipeline.rend(); ++byteBytePipeIterator) {
+        ByteBytePipe* pipe = *byteBytePipeIterator;
+        Errorable<size_t> pipeShouldWriteErrorable = pipe->Write(buffer);
+        if (!pipeShouldWriteErrorable.IsSuccess()) {
+          // TODO: Log error.
+          readWriteCloser->Close();
+          return;
+        }
+
+        if (!pipeShouldWriteErrorable.GetValue()) {
+          return;
+        }
+
+        buffer = pipe->GetWriterBuffer();
+      }
+
+      WriteDirect(buffer);
+    }
   }
 
   void Connection::WriteAndFlush(const Packet& packet) {
