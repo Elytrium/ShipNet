@@ -15,8 +15,8 @@ namespace Ship {
   const uint32_t ByteBuffer::ANGLE_SIZE = BYTE_SIZE;
   const uint32_t ByteBuffer::UUID_SIZE = LONG_SIZE * 2;
 
-  thread_local uint8_t* readBuffer = new uint8_t[MAX_PACKET_SIZE];
-  thread_local uint8_t* writeBuffer = new uint8_t[MAX_PACKET_SIZE];
+  thread_local uint8_t* byteBufferReadBuffer = new uint8_t[MAX_PACKET_SIZE];
+  thread_local uint8_t* byteBufferWriteBuffer = new uint8_t[MAX_PACKET_SIZE];
 
   ByteBuffer::~ByteBuffer() = default;
 
@@ -412,8 +412,8 @@ namespace Ship {
   }
 
   void ByteBufferImpl::WriteBytes(ByteBuffer* input, size_t size) {
-    input->ReadBytes(writeBuffer, size);
-    WriteBytes(writeBuffer, size);
+    input->ReadBytes(byteBufferWriteBuffer, size);
+    WriteBytes(byteBufferWriteBuffer, size);
   }
 
   Errorable<uint8_t*> ByteBufferImpl::ReadBytes(uint8_t* output, size_t size) {

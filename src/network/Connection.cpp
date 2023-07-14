@@ -2,7 +2,7 @@
 #include "pipe/FramedPipe.hpp"
 
 namespace Ship {
-  thread_local ByteBuffer* writeBuffer = new ByteBufferImpl(MAX_PACKET_SIZE);
+  thread_local ByteBuffer* connectionWriteBuffer = new ByteBufferImpl(MAX_PACKET_SIZE);
 
   Connection::Connection(BytePacketPipe* byte_packet_pipe, PacketHandler* main_packet_handler, size_t reader_buffer_length, size_t writer_buffer_length,
     ReadWriteCloser* read_write_closer, EventLoop* event_loop)
@@ -143,9 +143,9 @@ namespace Ship {
   }
 
   void Connection::Write(const Packet& packet) {
-    writeBuffer->ResetReaderIndex();
-    writeBuffer->ResetWriterIndex();
-    Errorable<bool> shouldWriteErrorable = bytePacketPipe->Write(writeBuffer, packet);
+    connectionWriteBuffer->ResetReaderIndex();
+    connectionWriteBuffer->ResetWriterIndex();
+    Errorable<bool> shouldWriteErrorable = bytePacketPipe->Write(connectionWriteBuffer, packet);
 
     if (!shouldWriteErrorable.IsSuccess()) {
       // TODO: Log error.
@@ -154,7 +154,7 @@ namespace Ship {
     }
 
     if (shouldWriteErrorable.GetValue()) {
-      ByteBuffer* buffer = writeBuffer;
+      ByteBuffer* buffer = connectionWriteBuffer;
 
       for (auto byteBytePipeIterator = pipeline.rbegin(); byteBytePipeIterator != pipeline.rend(); ++byteBytePipeIterator) {
         ByteBytePipe* pipe = *byteBytePipeIterator;
