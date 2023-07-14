@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 
 project(ShipNet)
 
-file(GLOB_RECURSE SHIP_NET_SOURCES src/*.[hc]pp)
+file(GLOB_RECURSE SHIP_NET_SOURCES ShipNet/*.[hc]pp)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_COMPILER "clang")
@@ -14,6 +14,7 @@ set(LIB_OUTPUT_DIR ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIB_OUTPUT_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIB_OUTPUT_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIB_OUTPUT_DIR})
+set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
 if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
     message(FATAL_ERROR "
@@ -29,7 +30,8 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif ()
 
-add_executable(ShipNet ${SHIP_NET_SOURCES})
+add_library(ShipNet SHARED ${SHIP_NET_SOURCES})
+
 if (APPLE)
     target_link_libraries(ShipNet "-lpthread")
 else ()
