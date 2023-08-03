@@ -1,14 +1,15 @@
 #pragma once
 
 #include <functional>
-#include <map>
+#include <list>
 #include <queue>
+#include <cstdint>
 
 namespace Ship {
   class EventLoop {
    private:
     std::queue<std::function<void()>> immediateTasks;
-    std::multimap<time_t, std::function<void()>> delayedTasks;
+    std::list<std::pair<uint32_t, std::function<void()>>> delayedTasks;
 
    public:
     virtual ~EventLoop() = default;

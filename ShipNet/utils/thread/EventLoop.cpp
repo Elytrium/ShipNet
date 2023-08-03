@@ -1,6 +1,5 @@
 #include "EventLoop.hpp"
-#include <ctime>
-#include <utility>
+#include "../ShipUtils.hpp"
 
 namespace Ship {
   void EventLoop::Execute(const std::function<void()>& function) {
@@ -8,7 +7,7 @@ namespace Ship {
   }
 
   void EventLoop::Delay(const std::function<void()>& function, time_t millis) {
-    delayedTasks.emplace(std::time(nullptr) + millis, function);
+    delayedTasks.emplace_back(ShipUtils::GetCurrentMillis() + millis, function);
   }
 
   void EventLoop::ProceedTasks() {
@@ -18,15 +17,16 @@ namespace Ship {
     }
 
     if (!delayedTasks.empty()) {
-      time_t currentTime = std::time(nullptr);
+      uint32_t currentTime = ShipUtils::GetCurrentMillis();
 
-      for (const auto& i : delayedTasks) {
-        if (i.first <= currentTime) {
-          i.second();
-        } else {
-          break;
+      delayedTasks.remove_if([&currentTime](auto& it) {
+        if (it.first <= currentTime) {
+          it.second();
+          return true;
         }
-      }
+
+        return false;
+      });
     }
   }
 }
